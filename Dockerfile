@@ -51,11 +51,20 @@ RUN sed -i '/^.*rm -rf ${dir}\/httpd-ssl.*/d' /usr/share/container-scripts/httpd
 COPY ./s2i/bin/ /usr/libexec/s2i
 
 # Install NPM
-RUN yum install -y --setopt=tsflags=nodocs yum-config-manager centos-release-scl && \
-    yum-config-manager --enable rhel-server-rhscl-7-rpms && \
-    yum install -y --setopt=tsflags=nodocs "rh-nodejs$NODEJS_VERSION" "rh-nodejs$NODEJS_VERSION-npm" git && \
-    rpm -V "rh-nodejs$NODEJS_VERSION" "rh-nodejs$NODEJS_VERSION-npm" git && \
-    yum clean all -y
+#RUN yum install -y --setopt=tsflags=nodocs yum-config-manager centos-release-scl && \
+#    yum-config-manager --enable rhel-server-rhscl-7-rpms && \
+#    yum install -y --setopt=tsflags=nodocs "rh-nodejs$NODEJS_VERSION" "rh-nodejs$NODEJS_VERSION-npm" git && \
+#    rpm -V "rh-nodejs$NODEJS_VERSION" "rh-nodejs$NODEJS_VERSION-npm" git && \
+#    yum clean all -y
+    
+RUN yum install -y centos-release-scl-rh && \
+    MODULE_DEPS="make gcc gcc-c++ git openssl-devel" && \
+    INSTALL_PKGS="$MODULE_DEPS rh-nodejs${NODEJS_VERSION} rh-nodejs${NODEJS_VERSION}-npm rh-nodejs${NODEJS_VERSION}-nodejs-nodemon nss_wrapper" && \
+    ln -s /usr/lib/node_modules/nodemon/bin/nodemon.js /usr/bin/nodemon && \
+    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    rpm -V $INSTALL_PKGS && \
+    yum -y clean all --enablerepo='*'
+
 
 # This default user is created in the base image
 USER 1001
