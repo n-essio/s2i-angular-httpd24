@@ -2,9 +2,9 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "nodejs16" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "nodejs16" ]
+    branches: [ "master" ]
 
 jobs:
 
