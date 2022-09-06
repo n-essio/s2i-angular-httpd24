@@ -1,4 +1,4 @@
-ROM quay.io/sclorg/s2i-core-c9s:c9s
+FROM quay.io/sclorg/s2i-core-c9s:c9s
 
 # This image provides a Node.JS environment you can use to run your Node.JS
 # applications.
