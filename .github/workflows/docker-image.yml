@@ -18,7 +18,7 @@ jobs:
       run: docker build . --file Dockerfile --tag s2i-angular-httpd24:$(date +%s)
       
     - name: Publish Image
-    - uses: matootie/github-docker@v3.0.0
+      uses: matootie/github-docker@v3.0.0
       with:
         accessToken: ${{ github.token }}
         contextName: Dockerfile
