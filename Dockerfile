@@ -58,36 +58,20 @@ RUN MODULE_DEPS="make gcc gcc-c++ git openssl-devel" && \
     INSTALL_PKGS="$MODULE_DEPS nodejs npm nodejs-nodemon nss_wrapper" && \
     ln -s /usr/lib/node_modules/nodemon/bin/nodemon.js /usr/bin/nodemon && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
-    rpm -V $INSTALL_PKGS &&
-
-RUN yum install -y https://www.softwarecollections.org/repos/rhscl/httpd24/epel-7-x86_64/noarch/rhscl-httpd24-epel-7-x86_64-1-2.noarch.rpm && \
-    yum install -y --setopt=tsflags=nodocs httpd24 && \
+    rpm -V $INSTALL_PKGS && \
     yum -y clean all --enablerepo='*'
 
-RUN pwd
-# Become root to install packages (was dropped to 1001 in the base image)
-USER 0
-# Make a directory to place custom Angular environments
-RUN mkdir /tmp/ng-environments
-# Copy all the files the container needs
-COPY ./root/ /
-# Set the directory location to whatever is default in the httpd image
-# and set the permissions of angular.conf to match the rest of conf.d
-RUN sed -i -e "s%REPLACE_WITH_HTTPD_APP_ROOT%${HTTPD_APP_ROOT}%" /etc/httpd/conf.d/angular.conf
-# Copy the S2I scripts
-COPY ./s2i/bin/ /usr/libexec/s2i
+# Copy the S2I scripts from the specific language image to $STI_SCRIPTS_PATH
+COPY ./s2i/bin/ $STI_SCRIPTS_PATH
 
+# Copy extra files to the image.
+COPY ./root/ /
 
 # Drop the root user and make the content of /opt/app-root owned by user 1001
 RUN chown -R 1001:0 ${APP_ROOT} && chmod -R ug+rwx ${APP_ROOT} && \
     rpm-file-permissions
 
-RUN sed -i -f /opt/app-root/etc/httpdconf.sed /opt/rh/httpd24/root/etc/httpd/conf/httpd.conf && \
-    head -n151 /opt/rh/httpd24/root/etc/httpd/conf/httpd.conf | tail -n1 | grep "AllowOverride All" || exit && \
-    chmod -R a+rwx /opt/rh/httpd24/root/var/run/httpd && \
-    chown -R 1001:1001 /opt/app-root
-
 USER 1001
 
 # Set the default CMD to print the usage of the language image
-CMD ["/usr/libexec/s2i/usage"]
+CMD $STI_SCRIPTS_PATH/usage
