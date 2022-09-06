@@ -60,8 +60,7 @@ RUN MODULE_DEPS="make gcc gcc-c++ git openssl-devel" && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
 
-RUN yum install -y && \
-    https://www.softwarecollections.org/repos/rhscl/httpd24/epel-7-x86_64/noarch/rhscl-httpd24-epel-7-x86_64-1-2.noarch.rpm && \
+RUN yum install -y https://www.softwarecollections.org/repos/rhscl/httpd24/epel-7-x86_64/noarch/rhscl-httpd24-epel-7-x86_64-1-2.noarch.rpm && \
     yum install -y --setopt=tsflags=nodocs httpd24 && \
     yum -y clean all --enablerepo='*'
 
