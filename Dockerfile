@@ -67,7 +67,7 @@ COPY ./s2i/bin/ $STI_SCRIPTS_PATH
 COPY ./root/ /
 
 # Drop the root user and make the content of /opt/app-root owned by user 1001
-RUN chown -R 1001:0 ${APP_ROOT} && chmod -R ug+rwx ${APP_ROOT} && \
+RUN chown -R 1001:0 ${APP_ROOT} && \
     rpm-file-permissions
 
 USER 1001
