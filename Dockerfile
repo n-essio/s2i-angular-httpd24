@@ -60,7 +60,7 @@ RUN MODULE_DEPS="make gcc gcc-c++ git openssl-devel" && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum -y clean all --enablerepo='*'
-
+RUN pwd
 # Become root to install packages (was dropped to 1001 in the base image)
 USER 0
 # Make a directory to place custom Angular environments
