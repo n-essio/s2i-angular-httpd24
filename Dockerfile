@@ -53,6 +53,25 @@ LABEL summary="$SUMMARY" \
       help="For more information visit https://github.com/sclorg/s2i-nodejs-container" \
       usage="s2i build <SOURCE-REPOSITORY> quay.io/sclorg/$NAME-$NODEJS_VERSION-c9s:latest <APP-NAME>"
 
+# Become root to install packages (was dropped to 1001 in the base image)
+USER 0
+# Make a directory to place custom Angular environments
+RUN mkdir /tmp/ng-environments
+# Copy all the files the container needs
+COPY ./root/ /
+# Set the directory location to whatever is default in the httpd image
+# and set the permissions of angular.conf to match the rest of conf.d
+RUN sed -i -e "s%REPLACE_WITH_HTTPD_APP_ROOT%${HTTPD_APP_ROOT}%" /etc/httpd/conf.d/angular.conf && \
+    chmod -R a+rwx ${HTTPD_MAIN_CONF_D_PATH}
+# Postfix all the httpd S2I files with `httpd` so they don't get overwritten
+RUN for file in /usr/libexec/s2i/*; do cp -- "$file" "$file-httpd"; done
+# Don't try to delete ${dir}/httpd-ssl since this causes an OpenShift pod to
+# fail when the TLS files are configured in a volume mount
+RUN sed -i '/^.*rm -rf ${dir}\/httpd-ssl.*/d' /usr/share/container-scripts/httpd/common.sh
+# Copy the S2I scripts
+COPY ./s2i/bin/ /usr/libexec/s2i
+
+
 # Package libatomic_ops was removed
 RUN MODULE_DEPS="make gcc gcc-c++ git openssl-devel" && \
     INSTALL_PKGS="$MODULE_DEPS nodejs npm nodejs-nodemon nss_wrapper" && \
@@ -60,12 +79,6 @@ RUN MODULE_DEPS="make gcc gcc-c++ git openssl-devel" && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum -y clean all --enablerepo='*'
-
-# Copy the S2I scripts from the specific language image to $STI_SCRIPTS_PATH
-COPY ./s2i/bin/ /usr/libexec/s2i
-
-# Copy extra files to the image.
-COPY ./root/ /
 
 # Drop the root user and make the content of /opt/app-root owned by user 1001
 RUN chown -R 1001:0 ${APP_ROOT} && chmod -R ug+rwx ${APP_ROOT} && \
