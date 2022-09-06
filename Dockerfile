@@ -68,6 +68,13 @@ RUN yum install -y yum-utils && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum -y clean all --enablerepo='*'
+    
+RUN INSTALL_PKGS="bsdtar findutils groff-base glibc-locale-source glibc-langpack-en gettext rsync scl-utils tar unzip xz yum" && \ 
+    mkdir -p ${HOME}/.pki/nssdb && \ 
+    chown -R 1001:0 ${HOME}/.pki && \ 
+    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    rpm -V $INSTALL_PKGS && \ 
+    yum -y clean all --enablerepo='*'
 
 ENV HTTPD_CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/httpd/ \
     HTTPD_APP_ROOT=${APP_ROOT} \
