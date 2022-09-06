@@ -43,6 +43,8 @@ COPY ./root/ /
 RUN sed -i -e "s%REPLACE_WITH_HTTPD_APP_ROOT%${HTTPD_APP_ROOT}%" /etc/httpd/conf.d/angular.conf && \
     chmod -R a+rwx ${HTTPD_MAIN_CONF_D_PATH}
 # Postfix all the httpd S2I files with `httpd` so they don't get overwritten
+RUN pwd
+RUN ls
 RUN for file in /usr/libexec/s2i/*; do cp -- "$file" "$file-httpd"; done
 # Don't try to delete ${dir}/httpd-ssl since this causes an OpenShift pod to
 # fail when the TLS files are configured in a volume mount
