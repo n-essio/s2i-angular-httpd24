@@ -25,7 +25,11 @@ ENV NODEJS_VERSION=16 \
     PATH=$HOME/node_modules/.bin/:$HOME/.npm-global/bin/:$PATH \
     CNB_STACK_ID=com.redhat.stacks.c9s-nodejs-16 \
     CNB_USER_ID=1001 \
-    CNB_GROUP_ID=0
+    CNB_GROUP_ID=0 \
+    APP_ROOT=/opt/app-root \ 
+    HOME=/opt/app-root/src \
+    PATH=/opt/app-root/src/bin:/opt/app-root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \ 
+    PLATFORM="el9"
 
 ENV SUMMARY="Platform for building and running Node.js $NODEJS_VERSION applications" \
 DESCRIPTION="Node.js $NODEJS_VERSION available as container is a base platform for \
@@ -87,6 +91,7 @@ ENV HTTPD_CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/httpd/ \
     HTTPD_DATA_PATH=/var/www \
     HTTPD_DATA_ORIG_PATH=/var/www \
     HTTPD_LOG_PATH=/var/log/httpd
+RUN mkdir /opt/app-root/src/scl_enable
 
 # When bash is started non-interactively, to run a shell script, for example it
 # looks for this variable and source the content of this file. This will enable
