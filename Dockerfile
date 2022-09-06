@@ -1,9 +1,11 @@
+FROM quay.io/sclorg/httpd-24-c9s
 FROM quay.io/sclorg/s2i-core-c9s:c9s
 
 # This image provides a Node.JS environment you can use to run your Node.JS
 # applications.
 
 EXPOSE 8080
+EXPOSE 8443
 
 # Add $HOME/node_modules/.bin to the $PATH, allowing user to make npm scripts
 # available on the CLI without using npm's --global installation mode
@@ -62,7 +64,7 @@ RUN MODULE_DEPS="make gcc gcc-c++ git openssl-devel" && \
     yum -y clean all --enablerepo='*'
 
 RUN yum install -y yum-utils && \
-    INSTALL_PKGS="gettext hostname nss_wrapper bind-utils httpd24 httpd24-mod_ssl httpd24-mod_ldap httpd24-mod_session httpd24-mod_auth_mellon httpd24-mod_security openssl" && \
+    INSTALL_PKGS="gettext hostname nss_wrapper bind-utils httpd mod_ssl mod_ldap mod_session mod_security mod_auth_mellon sscg" && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum -y clean all --enablerepo='*'
@@ -76,9 +78,8 @@ ENV HTTPD_CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/httpd/ \
     HTTPD_TLS_CERT_PATH=/etc/httpd/tls \
     HTTPD_VAR_RUN=/var/run/httpd \
     HTTPD_DATA_PATH=/var/www \
-    HTTPD_DATA_ORIG_PATH=/opt/rh/httpd24/root/var/www \
-    HTTPD_LOG_PATH=/var/log/httpd24 \
-    HTTPD_SCL=httpd24
+    HTTPD_DATA_ORIG_PATH=/var/www \
+    HTTPD_LOG_PATH=/var/log/httpd
 
 # When bash is started non-interactively, to run a shell script, for example it
 # looks for this variable and source the content of this file. This will enable
