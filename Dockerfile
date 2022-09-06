@@ -91,6 +91,8 @@ ENV HTTPD_CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/httpd/ \
     HTTPD_DATA_PATH=/var/www \
     HTTPD_DATA_ORIG_PATH=/var/www \
     HTTPD_LOG_PATH=/var/log/httpd
+    HTTPD_SCL=httpd
+    
 RUN mkdir /opt/app-root/src/scl_enable
 
 # When bash is started non-interactively, to run a shell script, for example it
