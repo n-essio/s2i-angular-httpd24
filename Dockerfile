@@ -1,62 +1,46 @@
-FROM quay.io/sclorg/s2i-core-c9s:c9s
-
-# This image provides a Node.JS environment you can use to run your Node.JS
-# applications.
+FROM quay.io/sclorg/s2i-base-c9s:c9s
 
 EXPOSE 8080
+EXPOSE 8443
 
-# Add $HOME/node_modules/.bin to the $PATH, allowing user to make npm scripts
-# available on the CLI without using npm's --global installation mode
-# This image will be initialized with "npm run $NPM_RUN"
-# See https://docs.npmjs.com/misc/scripts, and your repo's package.json
-# file for possible values of NPM_RUN
-# Description
-# Environment:
-# * $NPM_RUN - Select an alternate / custom runtime mode, defined in your package.json files' scripts section (default: npm run "start").
-# Expose ports:
-# * 8080 - Unprivileged port used by nodejs application
+ENV NAME=nginx \
+    NGINX_VERSION=1.22 \
+    NGINX_SHORT_VER=122 \
+    VERSION=0
 
-ENV NODEJS_VERSION=16 \
-    NPM_RUN=start \
-    NAME=nodejs \
-    NPM_CONFIG_PREFIX=$HOME/.npm-global \
-    PATH=$HOME/node_modules/.bin/:$HOME/.npm-global/bin/:$PATH \
-    CNB_STACK_ID=com.redhat.stacks.c9s-nodejs-16 \
-    CNB_USER_ID=1001 \
-    CNB_GROUP_ID=0
+ENV SUMMARY="Platform for running nginx $NGINX_VERSION or building nginx-based application" \
+    DESCRIPTION="Nginx is a web server and a reverse proxy server for HTTP, SMTP, POP3 and IMAP \
+protocols, with a strong focus on high concurrency, performance and low memory usage. The container \
+image provides a containerized packaging of the nginx $NGINX_VERSION daemon. The image can be used \
+as a base image for other applications based on nginx $NGINX_VERSION web server. \
+Nginx server image can be extended using source-to-image tool."
 
-ENV SUMMARY="Platform for building and running Node.js $NODEJS_VERSION applications" \
-DESCRIPTION="Node.js $NODEJS_VERSION available as container is a base platform for \
-building and running various Node.js $NODEJS_VERSION applications and frameworks. \
-Node.js is a platform built on Chrome's JavaScript runtime for easily building \
-fast, scalable network applications. Node.js uses an event-driven, non-blocking I/O model \
-that makes it lightweight and efficient, perfect for data-intensive real-time applications \
-that run across distributed devices."
-
-LABEL summary="$SUMMARY" \
-      description="$DESCRIPTION" \
-      io.k8s.description="$DESCRIPTION" \
-      io.k8s.display-name="Node.js $NODEJS_VERSION" \
+LABEL summary="${SUMMARY}" \
+      description="${DESCRIPTION}" \
+      io.k8s.description="${DESCRIPTION}" \
+      io.k8s.display-name="Nginx ${NGINX_VERSION}" \
       io.openshift.expose-services="8080:http" \
-      io.openshift.tags="builder,$NAME,${NAME}${NODEJS_VERSION}" \
-      io.openshift.s2i.scripts-url="image:///usr/libexec/s2i" \
-      io.s2i.scripts-url="image:///usr/libexec/s2i" \
-      io.buildpacks.stack.id="com.redhat.stacks.c9s-nodejs-16" \
-      com.redhat.dev-mode="DEV_MODE:false" \
-      com.redhat.deployments-dir="${APP_ROOT}/src" \
-      com.redhat.dev-mode.port="DEBUG_PORT:5858" \
-      com.redhat.component="${NAME}-${NODEJS_VERSION}-container" \
-      name="sclorg/$NAME-$NODEJS_VERSION" \
+      io.openshift.expose-services="8443:https" \
+      io.openshift.tags="builder,${NAME},${NAME}-${NGINX_SHORT_VER}" \
+      com.redhat.component="${NAME}-${NGINX_SHORT_VER}-container" \
+      name="sclorg/${NAME}-${NGINX_SHORT_VER}-c9s" \
       version="1" \
       com.redhat.license_terms="https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI" \
       maintainer="SoftwareCollections.org <sclorg@redhat.com>" \
-      help="For more information visit https://github.com/sclorg/s2i-nodejs-container" \
-      usage="s2i build <SOURCE-REPOSITORY> quay.io/sclorg/$NAME-$NODEJS_VERSION-c9s:latest <APP-NAME>"
+      help="For more information visit https://github.com/sclorg/${NAME}-container" \
+      usage="s2i build <SOURCE-REPOSITORY> quay.io/sclorg/${NAME}-${NGINX_SHORT_VER}-c9s:latest <APP-NAME>"
 
-# Package libatomic_ops was removed
-RUN MODULE_DEPS="make gcc gcc-c++ git openssl-devel" && \
-    INSTALL_PKGS="$MODULE_DEPS nodejs npm nodejs-nodemon nss_wrapper" && \
-    ln -s /usr/lib/node_modules/nodemon/bin/nodemon.js /usr/bin/nodemon && \
+ENV NGINX_CONFIGURATION_PATH=${APP_ROOT}/etc/nginx.d \
+    NGINX_CONF_PATH=/etc/nginx/nginx.conf \
+    NGINX_DEFAULT_CONF_PATH=${APP_ROOT}/etc/nginx.default.d \
+    NGINX_CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/nginx \
+    NGINX_APP_ROOT=${APP_ROOT} \
+    NGINX_LOG_PATH=/var/log/nginx \
+    NGINX_PERL_MODULE_PATH=${APP_ROOT}/etc/perl
+
+# Modules does not exist
+RUN yum -y module enable nginx:$NGINX_VERSION && \
+    INSTALL_PKGS="nss_wrapper bind-utils gettext hostname nginx nginx-mod-stream nginx-mod-http-perl" && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum -y clean all --enablerepo='*'
@@ -67,11 +51,41 @@ COPY ./s2i/bin/ $STI_SCRIPTS_PATH
 # Copy extra files to the image.
 COPY ./root/ /
 
-# Drop the root user and make the content of /opt/app-root owned by user 1001
-RUN chown -R 1001:0 ${APP_ROOT} && chmod -R ug+rwx ${APP_ROOT} && \
+# Changing ownership and user rights to support following use-cases:
+# 1) running container on OpenShift, whose default security model
+#    is to run the container under random UID, but GID=0
+# 2) for working root-less container with UID=1001, which does not have
+#    to have GID=0
+# 3) for default use-case, that is running container directly on operating system,
+#    with default UID and GID (1001:0)
+# Supported combinations of UID:GID are thus following:
+# UID=1001 && GID=0
+# UID=<any>&& GID=0
+# UID=1001 && GID=<any>
+RUN sed -i -f ${NGINX_APP_ROOT}/nginxconf.sed ${NGINX_CONF_PATH} && \
+    mkdir -p ${NGINX_APP_ROOT}/etc/nginx.d/ && \
+    mkdir -p ${NGINX_APP_ROOT}/etc/nginx.default.d/ && \
+    mkdir -p ${NGINX_APP_ROOT}/src/nginx-start/ && \
+    mkdir -p ${NGINX_CONTAINER_SCRIPTS_PATH}/nginx-start && \
+    mkdir -p ${NGINX_LOG_PATH} && \
+    mkdir -p ${NGINX_PERL_MODULE_PATH} && \
+    chown -R 1001:0 ${NGINX_CONF_PATH} && \
+    chown -R 1001:0 ${NGINX_APP_ROOT}/etc && \
+    chown -R 1001:0 ${NGINX_APP_ROOT}/src/nginx-start/  && \
+    chown -R 1001:0 ${NGINX_CONTAINER_SCRIPTS_PATH}/nginx-start && \
+    chown -R 1001:0 /var/lib/nginx /var/log/nginx /run && \
+    chmod    ug+rw  ${NGINX_CONF_PATH} && \
+    chmod -R ug+rwX ${NGINX_APP_ROOT}/etc && \
+    chmod -R ug+rwX ${NGINX_APP_ROOT}/src/nginx-start/  && \
+    chmod -R ug+rwX ${NGINX_CONTAINER_SCRIPTS_PATH}/nginx-start && \
+    chmod -R ug+rwX /var/lib/nginx /var/log/nginx /run && \
     rpm-file-permissions
 
 USER 1001
 
-# Set the default CMD to print the usage of the language image
+# Not using VOLUME statement since it's not working in OpenShift Online:
+# https://github.com/sclorg/httpd-container/issues/30
+# VOLUME ["/usr/share/nginx/html"]
+# VOLUME ["/var/log/nginx/"]
+
 CMD $STI_SCRIPTS_PATH/usage
