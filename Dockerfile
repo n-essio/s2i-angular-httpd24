@@ -1,11 +1,9 @@
-FROM quay.io/sclorg/httpd-24-c9s
 FROM quay.io/sclorg/s2i-core-c9s:c9s
 
 # This image provides a Node.JS environment you can use to run your Node.JS
 # applications.
 
 EXPOSE 8080
-EXPOSE 8443
 
 # Add $HOME/node_modules/.bin to the $PATH, allowing user to make npm scripts
 # available on the CLI without using npm's --global installation mode
@@ -25,11 +23,7 @@ ENV NODEJS_VERSION=16 \
     PATH=$HOME/node_modules/.bin/:$HOME/.npm-global/bin/:$PATH \
     CNB_STACK_ID=com.redhat.stacks.c9s-nodejs-16 \
     CNB_USER_ID=1001 \
-    CNB_GROUP_ID=0 \
-    APP_ROOT=/opt/app-root \ 
-    HOME=/opt/app-root/src \
-    PATH=/opt/app-root/src/bin:/opt/app-root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \ 
-    PLATFORM="el9"
+    CNB_GROUP_ID=0
 
 ENV SUMMARY="Platform for building and running Node.js $NODEJS_VERSION applications" \
 DESCRIPTION="Node.js $NODEJS_VERSION available as container is a base platform for \
@@ -66,41 +60,6 @@ RUN MODULE_DEPS="make gcc gcc-c++ git openssl-devel" && \
     yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
     rpm -V $INSTALL_PKGS && \
     yum -y clean all --enablerepo='*'
-
-RUN yum install -y yum-utils && \
-    INSTALL_PKGS="gettext hostname nss_wrapper bind-utils httpd mod_ssl mod_ldap mod_session mod_security mod_auth_mellon sscg" && \
-    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
-    rpm -V $INSTALL_PKGS && \
-    yum -y clean all --enablerepo='*'
-    
-RUN INSTALL_PKGS="bsdtar findutils groff-base glibc-locale-source glibc-langpack-en gettext rsync scl-utils tar unzip xz yum" && \ 
-    mkdir -p ${HOME}/.pki/nssdb && \ 
-    chown -R 1001:0 ${HOME}/.pki && \ 
-    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
-    rpm -V $INSTALL_PKGS && \ 
-    yum -y clean all --enablerepo='*'
-
-ENV HTTPD_CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/httpd/ \
-    HTTPD_APP_ROOT=${APP_ROOT} \
-    HTTPD_CONFIGURATION_PATH=${APP_ROOT}/etc/httpd.d \
-    HTTPD_MAIN_CONF_PATH=/etc/httpd/conf \
-    HTTPD_MAIN_CONF_MODULES_D_PATH=/etc/httpd/conf.modules.d \
-    HTTPD_MAIN_CONF_D_PATH=/etc/httpd/conf.d \
-    HTTPD_TLS_CERT_PATH=/etc/httpd/tls \
-    HTTPD_VAR_RUN=/var/run/httpd \
-    HTTPD_DATA_PATH=/var/www \
-    HTTPD_DATA_ORIG_PATH=/var/www \
-    HTTPD_LOG_PATH=/var/log/httpd
-    
-RUN touch /opt/app-root/scl_enable
-
-# When bash is started non-interactively, to run a shell script, for example it
-# looks for this variable and source the content of this file. This will enable
-# the SCL for all scripts without need to do 'scl enable'.
-ENV BASH_ENV=${HTTPD_APP_ROOT}/scl_enable \
-    ENV=${HTTPD_APP_ROOT}/scl_enable \
-    PROMPT_COMMAND=". ${HTTPD_APP_ROOT}/scl_enable"
-
 
 # Copy the S2I scripts from the specific language image to $STI_SCRIPTS_PATH
 COPY ./s2i/bin/ $STI_SCRIPTS_PATH
